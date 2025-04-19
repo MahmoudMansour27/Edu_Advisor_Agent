@@ -6,4 +6,6 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "mcp[cli]>=1.6.0",
+    "spire>=0.4.2",
+    "spire-doc>=13.3.8",
 ]

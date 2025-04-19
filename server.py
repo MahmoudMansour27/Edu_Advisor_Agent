@@ -1,0 +1,183 @@
+from mcp.server.fastmcp import FastMCP
+from mcp.server.fastmcp.prompts import base
+import os
+from pypdf import PdfReader
+
+
+mcp = FastMCP('FileSystem')
+LECTURES_PATH = './resourses/'
+subjects_folders = os.listdir('./resourses')
+
+# lectures = os.listdir('./resourses/'+subjects_folders[0])
+# print(lectures)
+# print(lectures.sort())
+
+# helpers
+def read_pdf(path):
+    '''
+    Read PDF file and return text.
+    '''
+    pdf = PdfReader(path)
+    text = ''
+    for page in pdf.pages:
+        text += page.extract_text()
+    return text
+
+# Resourses
+@mcp.resource('dm://Lectures')
+def read_DM_Lecturs():
+    '''
+    Digital Multimedia lectures text content.
+    '''
+    lectures = {}
+    for i, file in enumerate(os.listdir('./resourses/'+ subjects_folders[subjects_folders.index('Digital Multimedia')])):
+        if file.endswith('.pdf'):
+            lectures[f'Lecture {i+1}'] = read_pdf(os.path.join(LECTURES_PATH, subjects_folders[subjects_folders.index('Digital Multimedia')], file))
+    return lectures
+
+@mcp.resource('dsp://Lectures')
+def read_DM_Lecturs():
+    '''
+    Digital Signal Processing lectures text content.
+    '''
+    lectures = {}
+    for i, file in enumerate(os.listdir('./resourses/'+ subjects_folders[subjects_folders.index('Digital Signal Processing')])):
+        if file.endswith('.pdf'):
+            lectures[f'Lecture {i+1}'] = read_pdf(os.path.join(LECTURES_PATH, subjects_folders[subjects_folders.index('Digital Signal Processing')], file))
+    return lectures
+
+@mcp.resource('ie://Lectures')
+def read_DM_Lecturs():
+    '''
+    Information Egnineering lectures text content.
+    '''
+    lectures = {}
+    for i, file in enumerate(os.listdir('./resourses/'+ subjects_folders[subjects_folders.index('Information Engineering')])):
+        if file.endswith('.pdf'):
+            lectures[f'Lecture {i+1}'] = read_pdf(os.path.join(LECTURES_PATH, subjects_folders[subjects_folders.index('Information Engineering')], file))
+    return lectures
+
+@mcp.resource('os2://Lectures')
+def read_DM_Lecturs():
+    '''
+    Operating System 2 lectures text content.
+    '''
+    lectures = {}
+    for i, file in enumerate(os.listdir('./resourses/'+ subjects_folders[subjects_folders.index('Operating System 2')])):
+        if file.endswith('.pdf'):
+            lectures[f'Lecture {i+1}'] = read_pdf(os.path.join(LECTURES_PATH, subjects_folders[subjects_folders.index('Operating System 2')], file))
+    return lectures
+
+@mcp.resource('pr://Lectures')
+def read_DM_Lecturs():
+    '''
+    Pattern Recognition lectures text content.
+    '''
+    lectures = {}
+    for i, file in enumerate(os.listdir('./resourses/'+ subjects_folders[subjects_folders.index('Pattern Recognition')])):
+        if file.endswith('.pdf'):
+            lectures[f'Lecture {i+1}'] = read_pdf(os.path.join(LECTURES_PATH, subjects_folders[subjects_folders.index('Pattern Recognition')], file))
+    return lectures
+
+# ------- 
+# Prompts
+# summarizr lecture
+@mcp.prompt()
+def summarize_lecture(subject_name: str, lecture_number: int) -> list[base.Message]:
+    '''
+    Summarize lecture text content.
+
+    Argruments:
+    subject_name (str): Subject name the lecture belongs to.
+    lecture_number (int): Lecture number that will summarized.
+
+    Rerturns (str): Summarized lecture text content. 
+    '''
+    return [
+        base.UserMessage('I want to summarize the lecture text content of {lecture_number} at {subject_name} course.'),
+        base.AssistantMessage('Here is the summarized lecture {lecture_number} at {subject_name} course.'),
+    ] 
+
+# study plan:
+@mcp.prompt()
+def study_plan(subject_name: str, lecture_number: int) -> list[base.Message]:
+    '''
+    Create a study plan for the lecture.
+
+    Argruments:
+    subject_name (str): Subject name the lecture belongs to.
+    lecture_number (int): Lecture number that will be studied.
+
+    Rerturns (str): Study plan for the lecture. 
+    '''
+    return [
+        base.UserMessage('I want to create a study plan for the lecture text content of {lecture_number} at {subject_name} course.'),
+        base.AssistantMessage('Here is the study plan for the lecture {lecture_number} at {subject_name} course.'),
+    ]
+
+# explain lecture content
+@mcp.prompt()
+def explain_lecture(subject_name: str, lecture_number: int) -> list[base.Message]:
+    '''
+    Explain lecture text content.
+
+    Argruments:
+    subject_name (str): Subject name the lecture belongs to.
+    lecture_number (int): Lecture number that will be explained.
+
+    Rerturns (str): Explained lecture text content. 
+    '''
+    return [
+        base.UserMessage('I want to explain the lecture text content of {lecture_number} at {subject_name} course.'),
+        base.AssistantMessage('Here is the explained lecture {lecture_number} at {subject_name} course.'),
+    ]
+
+# create markdown summary
+@mcp.prompt()
+def create_markdown_summary(subject_name: str, lecture_number: int) -> list[base.Message]:
+    '''
+    Create a markdown summary conntent for the lecture.
+
+    Argruments:
+    subject_name (str): Subject name the lecture belongs to.
+    lecture_number (int): Lecture number that will be summarized.
+
+    Rerturns (str): Summarized lecture markdown content. 
+    '''
+    return [
+        base.UserMessage('I want to summarize the lecture text content of  {lecture_number} at {subject_name} course.'),
+        base.UserMessage('Create summarization using markdown format.'),
+        base.AssistantMessage('Here is the markdown file for the lecture {lecture_number} at {subject_name} course.'),
+    ]
+
+# -----------
+# Tools
+# create markdown summary file
+@mcp.tool()
+def create_markdown_summary(markdown_summarization: str) -> str:
+    '''
+    Create a markdown file for the lecture.
+
+    Argruments:
+    markdown_summarization (str): Summarized lecture text content.
+    '''
+    
+    with open('./outputs/lecture_summary.md', 'w') as f:
+        f.write(markdown_summarization)
+    
+    return 'file saved at /outputs/lecture_summary.md'
+
+
+
+    
+# # Create summarized pdf
+# @mcp.tool()
+# def convert_mar_summarized_pdf(summarization: str) -> str:
+#     '''
+#     Create a summarized PDF file for the lecture.
+
+#     Argruments:
+#     summarization (str): Summarized lecture text content.
+#     '''
+    
+    

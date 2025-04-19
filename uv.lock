@@ -61,10 +61,16 @@ version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
     { name = "mcp", extra = ["cli"] },
+    { name = "spire" },
+    { name = "spire-doc" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "mcp", extras = ["cli"], specifier = ">=1.6.0" }]
+requires-dist = [
+    { name = "mcp", extras = ["cli"], specifier = ">=1.6.0" },
+    { name = "spire", specifier = ">=0.4.2" },
+    { name = "spire-doc", specifier = ">=13.3.8" },
+]
 
 [[package]]
 name = "h11"
@@ -165,6 +171,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/d6/54/cfe61301667036ec958cb99bd3efefba235e65cdeb9c84d24a8293ba1d90/mdurl-0.1.2.tar.gz", hash = "sha256:bb413d29f5eea38f31dd4754dd7377d4465116fb207585f97bf925588687c1ba", size = 8729 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b3/38/89ba8ad64ae25be8de66a6d463314cf1eb366222074cfda9ee839c56a4b4/mdurl-0.1.2-py3-none-any.whl", hash = "sha256:84008a41e51615a49fc9966191ff91509e3c40b939176e643fd50a5c2196b8f8", size = 9979 },
+]
+
+[[package]]
+name = "plum-dispatch"
+version = "1.7.4"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/39/4e/f4d6b2bd80a9880989d37773f0f2e3a91a2d5352732e4ebb68b5606bca83/plum-dispatch-1.7.4.tar.gz", hash = "sha256:1c1d15b2842b5fa98405fd3dff6fad4887bdc77b60bd200e209d76ebfe9990fe", size = 56429 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e6/b6/3aaa985591c63da64c7bd8c5f470442a4c00b37ad3ed057f21de14174f83/plum_dispatch-1.7.4-py3-none-any.whl", hash = "sha256:c40dbeab269bbbf972ce0dbc078380da19ebaee1a370a2c564e1814a11bde216", size = 24238 },
 ]
 
 [[package]]
@@ -307,6 +322,26 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/a2/87/a6771e1546d97e7e041b6ae58d80074f81b7d5121207425c964ddf5cfdbd/sniffio-1.3.1.tar.gz", hash = "sha256:f4324edc670a0f49750a81b895f35c3adb843cca46f0530f79fc1babb23789dc", size = 20372 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e9/44/75a9c9421471a6c4805dbf2356f7c181a29c1879239abab1ea2cc8f38b40/sniffio-1.3.1-py3-none-any.whl", hash = "sha256:2f6da418d1f1e0fddd844478f41680e794e6051915791a034ff65e5f100525a2", size = 10235 },
+]
+
+[[package]]
+name = "spire"
+version = "0.4.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/9f/ec/4cf2cc2c2f0b82e267b725d5600a30f614df0c56d8b72ff5c7f6ba63f37a/spire-0.4.2.tar.gz", hash = "sha256:c797f01b072a152c432af8fa7317cd87299ecf9295fb215732bbcb971645bbb2", size = 1549730 }
+
+[[package]]
+name = "spire-doc"
+version = "13.3.8"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "plum-dispatch" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/bb/4a/b755f159e1b35409f7d2871ce5ee8839c89081864c0be66384fbef010d25/spire_doc-13.3.8-py3-none-macosx_10_7_universal.whl", hash = "sha256:fd6dd36f2d3ccc1d8d8d66ecd6d95acc462270d90d2b7687247a5d0294533b5d", size = 50836992 },
+    { url = "https://files.pythonhosted.org/packages/62/35/3be530ab6cc88c1e870d51e787879df3b849b44ff4e97b8c91285a16fd38/spire_doc-13.3.8-py3-none-manylinux2014_aarch64.whl", hash = "sha256:d1c46a6cce64acd631daac72da38202a4b954f051fb8e4c2689177ce1948bae4", size = 24189275 },
+    { url = "https://files.pythonhosted.org/packages/b2/ba/8449f1fed02157cda320a1bf454e15ec80a33891b4ec6b0da00145ee621b/spire_doc-13.3.8-py3-none-manylinux_2_31_x86_64.whl", hash = "sha256:bbe68a400b3f550bc7268b6cb1b8cff771b10de17cc0969c8e872a61c4e2c3a3", size = 42345388 },
+    { url = "https://files.pythonhosted.org/packages/95/db/c6fe8cbb0e193d7b6ab52295260afbd961a2909a09839d443afd539c697e/spire_doc-13.3.8-py3-none-win_amd64.whl", hash = "sha256:d987763d97783ce69d66644964486c9d276eb52467a67aca4ae4c9525dc2353d", size = 27040855 },
 ]
 
 [[package]]
