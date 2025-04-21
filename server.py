@@ -2,15 +2,28 @@ from mcp.server.fastmcp import FastMCP
 from mcp.server.fastmcp.prompts import base
 import os
 from pypdf import PdfReader
+from spire.doc import Document, FileFormat
+from spire.doc.common import *
+import asyncio
+from dotenv import load_dotenv
+from brave_search_python_client import (
+    BraveSearch,
+    CountryCode, 
+    LanguageCode,
+    WebSearchRequest
+)
 
+# Load environment variables
+load_dotenv()
+api_key = os.getenv('BRAVE_SEARCH_API_KEY')
+if not api_key:
+    msg = "BRAVE_SEARCH_API_KEY not found in environment"
+    raise ValueError(msg)
 
 mcp = FastMCP('FileSystem')
 LECTURES_PATH = './resourses/'
 subjects_folders = os.listdir('./resourses')
 
-# lectures = os.listdir('./resourses/'+subjects_folders[0])
-# print(lectures)
-# print(lectures.sort())
 
 # helpers
 def read_pdf(path):
@@ -22,6 +35,38 @@ def read_pdf(path):
     for page in pdf.pages:
         text += page.extract_text()
     return text
+
+async def search(query: str) -> None:
+    '''
+    Search the query using Brave Search API.
+
+    Argruments:
+    query (str): Searching query.
+
+    Returns (str): List of results links.
+    '''
+    
+    # Initialize the BraveSearch client
+    brave_search = BraveSearch(api_key= api_key)
+
+    # Perform a web search
+    response = await brave_search.web(
+        WebSearchRequest(
+            q= query,
+            count= 10, 
+            country= CountryCode.US,
+            search_lang=LanguageCode.EN,
+        )
+    )
+    results = []
+    web = {}
+    for _result in response.web.results if response.web else []:
+        web['title'] = _result.title
+        web['url'] = _result.url
+        web['description'] = _result.description
+        results.append(web)
+
+    return results
 
 # Resourses
 @mcp.resource('dm://Lectures')
@@ -150,6 +195,23 @@ def create_markdown_summary(subject_name: str, lecture_number: int) -> list[base
         base.AssistantMessage('Here is the markdown file for the lecture {lecture_number} at {subject_name} course.'),
     ]
 
+# generate lecture searching queries
+@mcp.prompt()
+def generate_lecture_searching_queries(subject_name: str, lecture_number: int) -> list[base.Message]:
+    '''
+    Generate searching queries for the lecture.
+
+    Argruments:
+    subject_name (str): Subject name the lecture belongs to.
+    lecture_number (int): Lecture number that will be searched.
+
+    Rerturns (str): Searching queries for the lecture. 
+    '''
+    return [
+        base.UserMessage('I want to generate list of searching queries for the lecture text content of {lecture_number} at {subject_name} course.'),
+        base.AssistantMessage('Here is the list of the searching queries for the lecture {lecture_number} at {subject_name} course.'),
+    ]
+
 # -----------
 # Tools
 # create markdown summary file
@@ -159,7 +221,7 @@ def create_markdown_summary(markdown_summarization: str) -> str:
     Create a markdown file for the lecture.
 
     Argruments:
-    markdown_summarization (str): Summarized lecture text content.
+    markdown_summarization (str): Summarized lecture text content in markdown format.
     '''
     
     with open('./outputs/lecture_summary.md', 'w') as f:
@@ -168,16 +230,37 @@ def create_markdown_summary(markdown_summarization: str) -> str:
     return 'file saved at /outputs/lecture_summary.md'
 
 
+# Create summarized pdf
+@mcp.tool()
+def save_markdown_summarized_pdf() -> str:
+    '''
+    Save a summarized PDF file for the lecture.
 
+    Argruments:
+    path(str): Path to the summarized markdown file.
+    '''
+    if os.path.exists('./outputs/lecture_summary.md'):
+        # Convert the markdown file to PDF
+        document = Document()
+        document.LoadFromFile('./outputs/lecture_summary.md')
+        document.SaveToFile("./outputs/lecture_summary.pdf", FileFormat.PDF)
+        return 'file saved at /outputs/lecture_summary.pdf'
+    else:   
+        return 'file not found at /outputs/lecture_summary.md'
     
-# # Create summarized pdf
-# @mcp.tool()
-# def convert_mar_summarized_pdf(summarization: str) -> str:
-#     '''
-#     Create a summarized PDF file for the lecture.
+# web search
+@mcp.tool()
+def web_search(queries: list) -> str:
+    '''
+    Search the web for the query.
 
-#     Argruments:
-#     summarization (str): Summarized lecture text content.
-#     '''
-    
-    
+    Argruments:
+    queries (str): List of queries to search the web.
+    '''
+
+    responeses = []
+    for q in queries:
+        response = asyncio.run(search(q))
+        responeses.append(response)
+    return responeses
+
