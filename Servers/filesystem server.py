@@ -142,7 +142,7 @@ async def run_server(
 
     # resources
     @server.list_resources()
-    async def list_resources() -> list[types.Resource]:
+    async def list_server_resources() -> list[types.Resource]:
         """
         List all resources in the root path.
         
@@ -165,7 +165,7 @@ async def run_server(
         return resources
     
     @server.read_resource()
-    async def read_resource(uri: types.AnyUrl) -> str:
+    async def read_resources(uri: types.AnyUrl) -> str:
         """
         Read the content of a resource.
         
@@ -206,17 +206,269 @@ async def run_server(
                 )
             )
         
-        # will be handle multiple file types 
-        try:
-            with open(full_path, 'rb') as file:
-                content = file.read()
-        except Exception as e:
+        # read file content
+        if get_MIME_type(full_path) == 'application/pdf':
+            try:
+                content = read_pdf(full_path)
+                return content
+            except Exception as e:
+                raise McpError(
+                    types.ErrorData(
+                        code= types.INTERNAL_ERROR, 
+                        message= f"Failed to read resource: {full_path}. Error: {str(e)}"
+                    )
+                )
+        elif get_MIME_type(full_path) == 'application/vnd.openxmlformats-officedocument.presentationml.presentation':
+            try:
+                content = read_pptx(full_path)
+                return content
+            except Exception as e:
+                raise McpError(
+                    types.ErrorData(
+                        code= types.INTERNAL_ERROR, 
+                        message= f"Failed to read resource: {full_path}. Error: {str(e)}"
+                    )
+                )
+        elif get_MIME_type(full_path) == 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+            try:
+               content = read_docx(full_path)
+               return content
+            except Exception as e:
+                raise McpError(
+                    types.ErrorData(
+                        code= types.INTERNAL_ERROR, 
+                        message= f"Failed to read resource: {full_path}. Error: {str(e)}"
+                    )
+                )
+        else:
+            try:
+                with open(full_path, 'r') as file:
+                    content = file.read()
+                    return content
+            except Exception as e:
+                raise McpError(
+                    types.ErrorData(
+                        code= types.INTERNAL_ERROR, 
+                        message= f"Failed to read resource: {full_path}. Error: {str(e)}"
+                    )
+                )
+            
+    # prompts
+    @server.list_prompts()
+    async def list_server_prompts():
+        '''List all prompts.'''
+        summarize_file_content = types.Prompt(
+            name = 'summarize_file_content',
+            description = 'Summarize the content of a file.',
+            arguments=[
+                types.PromptArgument(
+                    name='path',
+                    description='The path to the file.',
+                    required= True
+                )
+            ]
+        )
+
+        create_a_study_plan = types.Prompt(
+            name= 'create_a_study_plan',
+            description= 'Create a study plan for the file content.',
+            arguments=[
+                types.PromptArgument(
+                    name='path',
+                    description='The path to the file.',
+                    required= True
+                )
+            ]
+        )
+
+        explain_file_content = types.Prompt(
+            name= 'explain_file_content',
+            description= 'Explain the content of a file.',
+            arguments=[
+                types.PromptArgument(
+                    name='path',
+                    description='The path to the file.',
+                    required= True
+                )
+            ]
+        )
+
+        create_markdown_summary = types.Prompt(
+            name= 'create_markdown_summary',
+            description= 'Create a markdown summary of the file content.',
+            arguments=[
+                types.PromptArgument(
+                    name='path',
+                    description='The path to the file.',
+                    required= True
+                )
+            ]
+        )
+
+        return [
+            summarize_file_content,
+            create_a_study_plan,
+            explain_file_content,
+            create_markdown_summary
+        ]
+    
+    @server.get_prompt()
+    async def get__specific_prompt(prompt_name: str, arguments: dict[str, str] | None) -> types.GetPromptResult:
+        '''
+        Get a specific prompt template.
+
+        Arge:
+        prompt_name (str): The name of the prompt.
+        arguments (dict[str, str] | None): Optional arguments for the prompt.
+
+        Returns:
+        types.GetPromptResult: The prompt template with arguments filled in.
+
+        Raises:
+        McpError: If the prompt name is not found or if the arguments are invalid.
+        '''
+
+        if (
+            prompt_name != 'summarize_file_content' or
+            prompt_name != 'create_a_study_plan' or
+            prompt_name != 'explain_file_content' or
+            prompt_name != 'create_markdown_summary'
+        ):
             raise McpError(
                 types.ErrorData(
-                    code= types.INTERNAL_ERROR, 
-                    message= f"Failed to read resource: {full_path}. Error: {str(e)}"
+                    code= types.INVALID_PARAMS, 
+                    message= f"Invalid prompt name: {prompt_name}. Expected 'summarize_file_content', 'create_a_study_plan', 'explain_file_content', or 'create_markdown_summary'."
                 )
             )
+        
+        if not arguments or path not in arguments:
+            raise McpError(
+                types.ErrorData(
+                    code= types.INVALID_PARAMS, 
+                    message= f"Missing required argument 'path' for prompt {prompt_name}."
+                )
+            )
+        
+        path = arguments['path']
+        if not is_safe_path(path, root_path):
+            raise McpError(
+                types.ErrorData(
+                    code= types.INVALID_PARAMS, 
+                    message= f"Unsafe path: {path}. Path must be within the root path."
+                )
+            )
+        
+        full_path = os.path.join(root_path, path)
+        if not os.path.exists(full_path) or not os.path.isfile(full_path):
+            raise McpError(
+                types.ErrorData(
+                    code= types.INVALID_PARAMS, 
+                    message= f"Resource does not exist: {full_path}."
+                )
+            )
+        
+        if get_MIME_type(full_path) == 'application/pdf':
+            try:
+                content = read_pdf(full_path)
+                return types.GetPromptResult(
+                    messages=[
+                        types.PromptMessage(
+                            role= 'user',
+                            content= types.TextContent(
+                                type= 'text',
+                                text= f"Imagine yourself as an Educational Advisor wants to summarize a content of the file ({path}) to a student.\ncontent:\n{content}."
+                            )
+                        ),
+                    ]
+                )
+            except Exception as e:
+                raise McpError(
+                    types.ErrorData(
+                        code= types.INVALID_PARAMS, 
+                        message= f"Failed to handle a resource: {full_path}. Error: {str(e)}"
+                    )
+                )
+            
+        elif get_MIME_type(full_path) == 'application/vnd.openxmlformats-officedocument.presentationml.presentation':
+            try:
+                content = read_pptx(full_path)
+                return types.GetPromptResult(
+                    messages=[
+                        types.PromptMessage(
+                            role= 'user',
+                            content= types.TextContent(
+                                type= 'text',
+                                text= f"Imagine yourself as an Educational Advisor wants to summarize a content of the file ({path}) to a student.\ncontent:\n{content}."
+                            )
+                        ),
+                    ]
+                )
+            except Exception as e:
+                raise McpError(
+                    types.ErrorData(
+                        code= types.INVALID_PARAMS, 
+                        message= f"Failed to handle a resource: {full_path}. Error: {str(e)}"
+                    )
+                )
+        
+        elif get_MIME_type(full_path) == 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+            try:
+                content = read_docx(full_path)
+                return types.GetPromptResult(
+                    messages=[
+                        types.PromptMessage(
+                            role= 'user',
+                            content= types.TextContent(
+                                type= 'text',
+                                text= f"Imagine yourself as an Educational Advisor wants to summarize a content of the file ({path}) to a student.\ncontent:\n{content}."
+                            )
+                        ),
+                    ]
+                )
+            except Exception as e:
+                raise McpError(
+                    types.ErrorData(
+                        code= types.INVALID_PARAMS, 
+                        message= f"Failed to handle a resource: {full_path}. Error: {str(e)}"
+                    )
+                )
+            
+        else:
+            try:
+                with open(full_path, 'r') as file:
+                    content = file.read()
+                    return types.GetPromptResult(
+                        messages=[
+                            types.PromptMessage(
+                                role= 'user',
+                                content= types.TextContent(
+                                    type= 'text',
+                                    text= f"Imagine yourself as an Educational Advisor wants to summarize a content of the file ({path}) to a student.\ncontent:\n{content}."
+                                )
+                            ),
+                        ]
+                    )
+            except Exception as e:
+                raise McpError(
+                    types.ErrorData(
+                        code= types.INVALID_PARAMS, 
+                        message= f"Failed to handle a resource: {full_path}. Error: {str(e)}"
+                    )
+                )
+            
+        # tools
+        @server.list_tools()
+        async def list_server_tools():
+            pass
+            
+        
+
+        
+
+
+
+        
+
 
 
         
