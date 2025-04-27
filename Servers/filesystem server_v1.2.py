@@ -10,6 +10,9 @@ from pydantic import BaseModel, Field
 from PyPDF2 import PdfReader
 from pptx import Presentation
 from docx import Document
+from typing import Annotated, Optional
+import shutil
+import  sys
 
 
 
@@ -120,7 +123,28 @@ def read_docx(path: str) -> str:
     return text
  
 
-    
+# Pydantic models
+class WriteFile(BaseModel):
+    '''Parameters for writing a file.'''
+
+    path: Annotated[str, Field(description= 'The path to the file.')]
+    content: Annotated[str, Field(description= 'The content to write to the file.')]
+    create_dirs: Annotated[bool, Field(description= 'Whether to create directories if they do not exist.', default= False)]
+
+class DeleteFile(BaseModel):
+    '''Parameters for deleting a file.'''
+
+    path: Annotated[str, Field(description= 'The path to the file.')]
+    recursive: Annotated[bool, Field(description= 'Whether to delete directories recursively.', default= False)]
+
+class SearchFile(BaseModel):
+    '''Parameters for searching a file.'''
+
+    query: Annotated[str, Field(description= 'The search query.')]
+    file_pattern: Annotated[str, Field(description= 'The file pattern to search for.', default= '*')]
+
+
+
 # Server initialization ---------------------------------
 async def run_server(
         root_path: str,
@@ -459,17 +483,148 @@ async def run_server(
         # tools
         @server.list_tools()
         async def list_server_tools():
-            pass
+            '''lst all tools.'''
+
+            return [
+                types.Tool(
+                    name= 'Write_file',
+                    description= 'Write a file to the filesystem.',
+                    inputSchema= WriteFile.model_json_schema()
+                ),
+
+                types.Tool(
+                    name= 'Delete_file',
+                    description= 'Delete a file from the filesystem.',
+                    inputSchema= DeleteFile.model_json_schema()
+                ),
+
+                types.Tool(
+                    name= 'Search_file',
+                    description= 'Search for a file in the filesystem.',
+                    inputSchema= SearchFile.model_json_schema()
+                )
+            ]
+    
+    @ server.call_tool()
+    async def call_server_tool(
+        name: str,
+        arguments: dict[str, str] | None,
+    ) -> list[types.TextContent | types.ImageContent | types.EmbeddedResource]:
+        
+        '''
+        Handel a tool call.
+        Args:
+        name (str): The name of the tool.
+        arguments (dict[str, str] | None): The arguments for the tool.
+        
+        Returns:
+        list[types.TextContent | types.ImageContent | types.EmbeddedResource]: The result of the tool call.
+        '''
+
+        if not arguments:
+            raise McpError(
+                types.ErrorData(
+                    code= types.INVALID_PARAMS, 
+                    message= f"Missing required arguments for tool {name}."
+                )
+            )
+        
+        if name == 'Write_file':
+            try:
+                args = WriteFile(**arguments)
+            except Exception as e:
+                raise McpError(
+                    types.ErrorData(
+                        code= types.INVALID_PARAMS, 
+                        message= f"Invalid arguments for tool {name}. Error: {str(e)}"
+                    )
+                )
             
+            full_path = os.path.join(root_path, args.path)
+
+            try:
+                if args.create_dirs:
+                    os.makedirs(os.path.dirname(full_path), exist_ok=True)
+                with open(full_path, 'w') as file:
+                    file.write(args.content)
+                
+                return [
+                    types.TextContent(
+                        type= 'text',
+                        text= f"File {args.path} written successfully."
+                    )
+                ]
+            except Exception as e: 
+                raise McpError(
+                    types.ErrorData(
+                        code= types.INTERNAL_ERROR, 
+                        message= f"Failed to write file {args.path}. Error: {str(e)}"
+                    )
+                )
+            
+        elif name == 'Delete_file':
+            try:
+                args = DeleteFile(**arguments)
+            except Exception as e:
+                raise McpError(
+                    types.ErrorData(
+                        code= types.INVALID_PARAMS, 
+                        message= f"Invalid arguments for tool {name}. Error: {str(e)}"
+                    )
+                )
+            
+            full_path = os.path.join(root_path, args.path)
+
+            try:
+                if os.path.isdir(full_path):
+                    if args.recursive:
+                        shutil.rmtree(full_path)
+                    else:
+                        os.rmdir(full_path)
+                else:
+                    os.remove(full_path)
+                
+                return [
+                    types.TextContent(
+                        type= 'text',
+                        text= f"File {args.path} deleted successfully."
+                    )
+                ]
+            except Exception as e:
+                raise McpError(
+                    types.ErrorData(
+                        code= types.INTERNAL_ERROR, 
+                        message= f"Failed to delete file {args.path}. Error: {str(e)}"
+                    )
+                )
         
-
+        else:
+            raise McpError(
+                types.ErrorData(
+                    code= types.INVALID_PARAMS, 
+                    message= f"Invalid tool name: {name}. Expected 'Write_file' or 'Delete_file'."
+                )
+            )
         
+    # start the server
+    async with mcp.server.stdio.stdio_server() as (reader, writer):
+        await server.run(
+            reader,
+            writer,
+            InitializationOptions(
+                server_name= 'filesystem',
+                server_version= '1.0.0',
+                capabilities= server.get_capabilities(
+                    notification_options= NotificationOptions(),
+                    experimental_capabilities= {}
+                )
+            )
+        )
 
 
-
-        
-
-
-
-        
-
+if __name__ == '__main__':
+    if len(sys.argv) != 2:
+        print("Usage: python filesystem_server.py <root_path>")
+        sys.exit(1)
+    
+    asyncio.run(run_server(sys.argv[1]))
