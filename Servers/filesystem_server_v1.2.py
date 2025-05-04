@@ -153,7 +153,6 @@ class MoveOper(BaseModel):
 
 
 
-
 # Server initialization ---------------------------------
 async def run_server(
         root_path: str,
@@ -772,9 +771,10 @@ async def run_server(
         )
 
 
-if __name__ == '__main__':
-    if len(sys.argv) != 2:
-        print("Usage: python filesystem_server.py <root_path>")
-        sys.exit(1)
-    
-    asyncio.run(run_server(sys.argv[1]))
+# def main():
+# if len(sys.argv) != 2:
+#     print("Usage: python filesystem_server.py <root_path>")
+#     sys.exit(1)
+
+# root_path = '/home/mahmoud/Documents/Work/Freelance/Upwork/Edu_Advisor_Agent/resourses'
+# asyncio.run(run_server(root_path))
