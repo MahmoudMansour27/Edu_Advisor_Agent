@@ -10,9 +10,10 @@ from pydantic import BaseModel, Field
 from PyPDF2 import PdfReader
 from pptx import Presentation
 from docx import Document
-from typing import Annotated, Optional
+from typing import Annotated
 import shutil
 import  sys
+import pathspec
 
 
 
@@ -142,6 +143,14 @@ class SearchFile(BaseModel):
 
     query: Annotated[str, Field(description= 'The search query.')]
     file_pattern: Annotated[str, Field(description= 'The file pattern to search for.', default= '*')]
+
+class MoveOper(BaseModel):
+    '''Parameters for moving a file or folder.'''
+
+    source_path: Annotated[str, Field(description= 'The source path of the file/ folder.')]
+    destination_path: Annotated[str, Field(description= 'The destination path of the folder.')]
+
+
 
 
 
@@ -499,9 +508,14 @@ async def run_server(
                 ),
 
                 types.Tool(
-                    name= 'Search_file',
-                    description= 'Search for a file in the filesystem.',
+                    name= 'Search_files',
+                    description= 'Search for files in the filesystem.',
                     inputSchema= SearchFile.model_json_schema()
+                ),
+                types.Tool(
+                    name= 'Move_oper',
+                    description= 'Move a file or folder in the filesystem.',
+                    inputSchema= MoveOper.model_json_schema()
                 )
             ]
     
@@ -597,7 +611,143 @@ async def run_server(
                         message= f"Failed to delete file {args.path}. Error: {str(e)}"
                     )
                 )
-        
+            
+        elif name == 'Search_files':
+            try:
+                args = SearchFile(**arguments)
+            except Exception as e:
+                raise McpError(
+                    types.ErrorData(
+                        code= types.INVALID_PARAMS, 
+                        message= f"Invalid arguments for tool {name}. Error: {str(e)}"
+                    )
+                )
+            
+            results = []
+            for root, _, files in os.walk(root_path):
+                for file in files:
+                    full_path = os.path.join(root, file)
+                    
+                    if not pathspec.Pattern(args.file_pattern).match_file(file):
+                        continue
+
+                    # search into file content
+                    try:
+                        if get_MIME_type(full_path) == 'application/pdf':
+                            try:
+                                content = read_pdf(full_path)
+                                if args.query.lower() in content.lower():
+                                    rel_path = os.path.relpath(full_path, root_path)
+                                    results.append(f'Found in {rel_path}')
+                            except Exception as e:
+                                raise McpError(
+                                    types.ErrorData(
+                                        code= types.INTERNAL_ERROR, 
+                                        message= f"Failed to read file: {full_path} for searching. Error: {str(e)}"
+                                    )
+                                )
+                        elif get_MIME_type(full_path) == 'application/vnd.openxmlformats-officedocument.presentationml.presentation':
+                            try:
+                                content = read_pptx(full_path)
+                                if args.query.lower() in content.lower():
+                                    rel_path = os.path.relpath(full_path, root_path)
+                                    results.append(f'Found in {rel_path}')
+                            except Exception as e:
+                                raise McpError(
+                                    types.ErrorData(
+                                        code= types.INTERNAL_ERROR, 
+                                        message= f"Failed to read file: {full_path} for searching. Error: {str(e)}"
+                                    )
+                                )
+                        elif get_MIME_type(full_path) == 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+                            try:
+                                content = read_docx(full_path)
+                                if args.query.lower() in content.lower():  
+                                    rel_path = os.path.relpath(full_path, root_path)
+                                    results.append(f'Found in {rel_path}')
+                            except Exception as e:
+                                raise McpError(
+                                    types.ErrorData(
+                                        code= types.INTERNAL_ERROR, 
+                                        message= f"Failed to read file: {full_path} for searching. Error: {str(e)}"
+                                    )
+                                )
+                        else:
+                            try:
+                                with open(full_path, 'r') as file:
+                                    content = file.read()
+                                    if args.query.lower() in content.lower():
+                                        rel_path = os.path.relpath(full_path, root_path)
+                                        results.append(f'Found in {rel_path}')
+                            except Exception as e:
+                                raise McpError(
+                                    types.ErrorData(
+                                        code= types.INTERNAL_ERROR, 
+                                        message= f"Failed to read file: {full_path} for searching. Error: {str(e)}"
+                                    )
+                                )
+                    except Exception as e:
+                        raise McpError(
+                            types.ErrorData(
+                                code= types.INTERNAL_ERROR, 
+                                message= f"Failed to search file {full_path}. Error: {str(e)}"
+                            )
+                        )
+                    
+                if not results:
+                    return [
+                        types.TextContent(
+                            type= 'text',
+                            text= f"No files found matching the query '{args.query}' with pattern '{args.file_pattern}'."
+                        )
+                    ]
+                
+                return [
+                    types.TextContent(
+                        type= 'text',
+                        text= f"Files found matching the query '{args.query}' with pattern '{args.file_pattern}':\n" + "\n".join(results)
+                    )
+                ]
+
+        elif name == 'Move_oper':
+            try:
+                args = MoveOper(**arguments)
+            except Exception as e:
+                raise McpError(
+                    types.ErrorData(
+                        code= types.INVALID_PARAMS, 
+                        message= f"Invalid arguments for tool {name}. Error: {str(e)}"
+                    )
+                )
+            
+            source_path = os.path.join(root_path, args.source_path)
+            destination_path = os.path.join(root_path, args.destination_path)
+
+            try:
+                if os.path.isdir(destination_path):
+                    shutil.move(source_path, destination_path)
+                    
+                    return [
+                        types.TextContent(
+                            type= 'text',
+                            text= f"File moved from {args.source_path} to {args.destination_path} successfully."
+                        )
+                    ]
+                else:
+                    raise McpError(
+                        types.ErrorData(
+                            code= types.INVALID_PARAMS, 
+                            message= f"Invalid destination path: {args.destination_path}."
+                        )
+                    )
+            except Exception as e:
+                raise McpError(
+                    types.ErrorData(
+                        code= types.INTERNAL_ERROR, 
+                        message= f"Failed to move file from {args.source_path} to {args.destination_path}. Error: {str(e)}"
+                    )
+                )
+            
         else:
             raise McpError(
                 types.ErrorData(
