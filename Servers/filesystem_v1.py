@@ -6,15 +6,15 @@ from spire.doc import Document, FileFormat
 from spire.doc.common import *
 
 # Load environment variables
-load_dotenv()
-api_key = os.getenv('BRAVE_SEARCH_API_KEY')
-if not api_key:
-    msg = "BRAVE_SEARCH_API_KEY not found in environment"
-    raise ValueError(msg)
+# load_dotenv()
+# api_key = os.getenv('BRAVE_SEARCH_API_KEY')
+# if not api_key:
+#     msg = "BRAVE_SEARCH_API_KEY not found in environment"
+#     raise ValueError(msg)
 
 mcp = FastMCP('FileSystem')
 LECTURES_PATH = './resourses/'
-subjects_folders = os.listdir('./resourses')
+subjects_folders = os.listdir('/home/mahmoud/Documents/Work/Freelance/Upwork/Edu_Advisor_Agent/resourses')
 
 
 # helpers

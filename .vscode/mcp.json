@@ -1,0 +1,18 @@
+{
+    "inputs": [
+    {
+        "type": "promptString",
+        "id": "perplexity-key",
+        "description": "Perplexity API Key",
+        "password": true
+    }
+    ],
+    "servers": {
+        "FilesSystem": {
+        "type": "stdio",
+        "command": "python",
+        "args": ["../Servers/filesystem_server_v1.2.py"]
+        }
+    }
+}
+  

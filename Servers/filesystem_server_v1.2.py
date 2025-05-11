@@ -10,10 +10,30 @@ from pydantic import BaseModel, Field
 from PyPDF2 import PdfReader
 from pptx import Presentation
 from docx import Document
-from typing import Annotated
+from typing import Annotated, Optional
 import shutil
 import  sys
 import pathspec
+
+# Constants
+DEFAULT_IGNORE_PATTERNS = [
+    ".git",
+    "__pycache__",
+    "*.pyc",
+    ".venv",
+    "venv",
+    ".env",
+    ".idea",
+    ".vscode",
+    "*.egg-info",
+    "dist",
+    "build",
+    ".pytest_cache",
+    ".coverage",
+    "htmlcov",
+    ".DS_Store",  # macOS
+    "Thumbs.db",  # Windows
+]
 
 
 
@@ -154,27 +174,44 @@ class MoveOper(BaseModel):
 
 
 # Server initialization ---------------------------------
-async def run_server(
+async def serve(
         root_path: str,
+        custom_ignore_patterns: Optional[list[str]] = None
 
 ) -> None:
     """
-    Run the server with the given root path.
+    Run the MCP server with the given root path.
     
     Args:
     root_path (str): The root path for the server.
+    custom_ignore_patterns: Optional list of patterns to ignore
     """
     if not os.path.exists(root_path):
         raise ValueError(f"Root path {root_path} does not exist.")
     
     root_path = os.path.abspath(root_path)
+    ignore_patterns = None
+
+    # Initialize ignore patterns
+    gitignore_path = os.path.join(root_path, '.gitignore')
+    if os.path.exists(gitignore_path):
+        with open(gitignore_path) as f:
+            patterns = f.readlines()
+    else:
+        patterns = DEFAULT_IGNORE_PATTERNS
+
+    if custom_ignore_patterns:
+        patterns.extend(custom_ignore_patterns)
+
+    ignore_patterns = pathspec.PathSpec.from_lines("gitwildmatch", patterns)
+
 
     # server
     server = Server('filesystem')
 
     # resources
     @server.list_resources()
-    async def list_server_resources() -> list[types.Resource]:
+    async def handle_list_resources() -> list[types.Resource]:
         """
         List all resources in the root path.
         
@@ -197,18 +234,18 @@ async def run_server(
         return resources
     
     @server.read_resource()
-    async def read_resources(uri: types.AnyUrl) -> str:
+    async def handle_read_resource(uri: types.AnyUrl) -> str:
         """
         Read the content of a resource.
         
         Args:
-        uri (types.AnyUrl): The URI of the resource.
+            uri (types.AnyUrl): The URI of the resource.
         
         Returns:
-        str: The content of the resource.
+            str: The content of the resource.
 
         Raises:
-        McpError: If the resource does not exist.
+            McpError: If the resource does not exist.
         """
 
         if uri.scheme != 'file':
@@ -287,7 +324,7 @@ async def run_server(
             
     # prompts
     @server.list_prompts()
-    async def list_server_prompts():
+    async def handle_list_prompts():
         '''List all prompts.'''
         summarize_file_content = types.Prompt(
             name = 'summarize_file_content',
@@ -345,7 +382,7 @@ async def run_server(
         ]
     
     @server.get_prompt()
-    async def get__specific_prompt(prompt_name: str, arguments: dict[str, str] | None) -> types.GetPromptResult:
+    async def handle_get_prompt(prompt_name: str, arguments: dict[str, str] | None) -> types.GetPromptResult:
         '''
         Get a specific prompt template.
 
@@ -490,8 +527,8 @@ async def run_server(
             
         # tools
         @server.list_tools()
-        async def list_server_tools():
-            '''lst all tools.'''
+        async def handle_list_tools():
+            '''list all tools.'''
 
             return [
                 types.Tool(
@@ -519,7 +556,7 @@ async def run_server(
             ]
     
     @ server.call_tool()
-    async def call_server_tool(
+    async def handle_call_tool(
         name: str,
         arguments: dict[str, str] | None,
     ) -> list[types.TextContent | types.ImageContent | types.EmbeddedResource]:
@@ -527,11 +564,11 @@ async def run_server(
         '''
         Handel a tool call.
         Args:
-        name (str): The name of the tool.
-        arguments (dict[str, str] | None): The arguments for the tool.
+            name (str): The name of the tool.
+            arguments (dict[str, str] | None): The arguments for the tool.
         
         Returns:
-        list[types.TextContent | types.ImageContent | types.EmbeddedResource]: The result of the tool call.
+            list[types.TextContent | types.ImageContent | types.EmbeddedResource]: The result of the tool call.
         '''
 
         if not arguments:
@@ -756,13 +793,13 @@ async def run_server(
             )
         
     # start the server
-    async with mcp.server.stdio.stdio_server() as (reader, writer):
+    async with mcp.server.stdio.stdio_server() as (read_stream, write_stream):
         await server.run(
-            reader,
-            writer,
+            read_stream,
+            write_stream,
             InitializationOptions(
                 server_name= 'filesystem',
-                server_version= '1.0.0',
+                server_version= '0.1.0',
                 capabilities= server.get_capabilities(
                     notification_options= NotificationOptions(),
                     experimental_capabilities= {}
@@ -770,11 +807,9 @@ async def run_server(
             )
         )
 
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        print("Usage: python server.py <root_directory>", file=sys.stderr)
+        sys.exit(1)
 
-# def main():
-# if len(sys.argv) != 2:
-#     print("Usage: python filesystem_server.py <root_path>")
-#     sys.exit(1)
-
-# root_path = '/home/mahmoud/Documents/Work/Freelance/Upwork/Edu_Advisor_Agent/resourses'
-# asyncio.run(run_server(root_path))
+    asyncio.run(serve(sys.argv[1]))
