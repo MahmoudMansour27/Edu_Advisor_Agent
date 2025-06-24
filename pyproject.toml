@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "beautifulsoup4>=4.13.4",
     "brave-search-python-client>=0.4.21",
     "mcp[cli]>=1.6.0",
     "pathspec>=0.12.1",

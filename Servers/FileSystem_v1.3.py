@@ -9,6 +9,20 @@ import mcp.types as types
 from mcp.shared.exceptions import McpError
 import shutil
 import pathspec
+import asyncio
+import os
+from dotenv import load_dotenv
+from brave_search_python_client import (
+    BraveSearch,
+    CountryCode, 
+    ImagesSearchRequest, 
+    LanguageCode, 
+    NewsSearchRequest,
+    VideosSearchRequest, 
+    WebSearchRequest
+)
+import requests
+from bs4 import BeautifulSoup
 
 
 
@@ -20,6 +34,13 @@ import pathspec
 #     print("Error: ", e, file=sys.stderr)
 #     sys.exit(1)
 ROOT_PATH = "/home/mahmoud/Documents/Work/Freelance/Upwork/Edu_Advisor_Agent/resourses"
+
+# Brave Search API
+load_dotenv()
+api_key = os.getenv('BRAVE_SEARCH_API_KEY')
+if not api_key:
+    msg = "BRAVE_SEARCH_API_KEY not found in environment"
+    raise ValueError(msg)
 
 
 # Server
@@ -670,5 +691,99 @@ def Copy_directory(source_path: str, destination_path: str) -> bool:
                 message= f"Failed to copy directory {source_path} to {destination_path}. Error: {str(e)}"
             )
         )
+    
 
+
+# ----------------------- Brave Search -----------------------
+
+@mcp.tool('Brave-Search')
+async def Brave_Search(query: str, count: int = 10) -> list:
+    '''
+    Search the query using Brave Search API.
+
+    Arguments:
+    query (str): Searching query.
+    count (int): Number of results to return. Default is 10.
+
+    Returns:
+    list: List of results links.
+    '''
+
+    # Initialize the BraveSearch client
+    brave_search = BraveSearch(api_key= api_key)
+
+
+    print(brave_search)
+    # Perform a web search
+    response = await brave_search.web(
+        WebSearchRequest(
+            q= query,
+            count= 10, 
+            country= CountryCode.US,
+            search_lang=LanguageCode.EN,
+        )
+    )
+    results = []
+    web = {}
+    for _result in response.web.results if response.web else []:
+        web['title'] = _result.title
+        web['url'] = _result.url
+        web['description'] = _result.description
+        results.append(web)
+
+    return results
+
+
+@mcp.tool('Get-latest-unversity-news')
+def Get_latest_unversity_news(count: int = 3) -> list:
+    '''
+    Get the latest news about universities using requests.
+
+    Returns:
+    count (int): Number of news articles to return.
+    list: List of news articles.
+    '''
+
+    uni_news_url = 'https://su.edu.eg/index.php/homepage_read_all_news/'
+    
+    # request
+    req = requests.get(uni_news_url)
+
+    if req.status_code != 200:
+        raise McpError(
+            types.ErrorData(
+                code= types.INTERNAL_ERROR, 
+                message= f"Failed to fetch university news. Status code: {req.status_code}"
+            )
+        )
+    
+    # extract news articles
+    soup = BeautifulSoup(req.text, 'html.parser')
+
+    news_articles = []
+    for article in soup.find_all('h3', class_='gdlr-core-blog-title gdlr-core-skin-title'):
+        request_url = article.find('a')['href']
+        new_req = requests.get(request_url)
+        soup_article = BeautifulSoup(new_req.text, 'html.parser')
+        new = {
+            'url': article.find('a')['href'],
+            'title': article.find('a').get_text(strip=True),
+            'content': soup_article.find_all('p')
+        }
+        news_articles.append(new)
+
+        if len(news_articles) >= count:
+            break
+
+    return news_articles
+
+
+# --------------------------- Database connection ---------------------------
+
+    
+
+
+
+
+    
     
