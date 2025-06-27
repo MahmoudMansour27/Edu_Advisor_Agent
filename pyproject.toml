@@ -7,7 +7,9 @@ requires-python = ">=3.11"
 dependencies = [
     "beautifulsoup4>=4.13.4",
     "brave-search-python-client>=0.4.21",
+    "faker>=37.4.0",
     "mcp[cli]>=1.6.0",
+    "mysql-connector-python>=9.3.0",
     "pathspec>=0.12.1",
     "pypdf>=5.4.0",
     "pypdf2>=3.0.1",
