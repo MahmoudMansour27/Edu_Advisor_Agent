@@ -1,5 +1,4 @@
 import pandas as pd
-import numpy as np
 import random
 from faker import Faker
 import mysql.connector
@@ -177,7 +176,7 @@ db_conn = mysql.connector.connect(
 
 cursor = db_conn.cursor()
 
-print(df_courses.info())
+print(df_students.info())
 
 # students data insertion
 for row in df_students.values:
@@ -201,6 +200,7 @@ for row in df_students.values:
 #     print(f"Inserted: {sql}")
 
 # db_conn.commit()
+# print('StudentProfile data commited successfully.\n')
 
 for row in df_academic.values:
     student_id = row[0]
@@ -213,34 +213,33 @@ for row in df_academic.values:
 
     sql = f"INSERT INTO AcademicRecords (student_id, course_code, course_name, semester, grade, credits, GPA) VALUES ('{student_id}', '{course_code}', '{course_name}', '{semester}', '{grade}', {credits}, {gpa})"
 
-    # try:
-    #     cursor.execute(sql)
-    # except mysql.connector.Error as err:
-    #     print(f"Error: {err}")
-    #     continue
-    # print(f"Inserted: {sql}")
+#     try:
+#         cursor.execute(sql)
+#     except mysql.connector.Error as err:
+#         print(f"Error: {err}")
+#         continue
+#     print(f"Inserted: {sql}")
 
 # db_conn.commit()
+# print('AcademicRecords data commited successfully.\n')
 
 for row in df_courses.values:
     course_code = row[0]
     name = row[1]
-    description = row[2]
-    credits = row[3]
-    prerequisites = row[4]
-    department = row[5]
-    instructor = row[6]
+    credits = row[2]
+    department = row[3]
 
-    sql = f"INSERT INTO CourseCatalog (course_code, name, description, credits, prerequisites, department, instructor) VALUES ('{course_code}', '{name}', '{description}', {credits}, '{prerequisites}', '{department}', '{instructor}')"
+    sql = f"INSERT INTO CourseCatalog (course_code, name, credits, department) VALUES ('{course_code}', '{name}', {credits}, '{department}')"
 
-    # try:
-    #     cursor.execute(sql)
-    # except mysql.connector.Error as err:
-    #     print(f"Error: {err}")
-    #     continue
-    # print(f"Inserted: {sql}")
+#     try:
+#         cursor.execute(sql)
+#     except mysql.connector.Error as err:
+#         print(f"Error: {err}")
+#         continue
+#     print(f"Inserted: {sql}")
 
 # db_conn.commit()
+# print('CourseCatalog data commited successfully.\n')
 
 for row in df_enrollment.values:
     student_id = row[0]
@@ -251,14 +250,15 @@ for row in df_enrollment.values:
 
     sql = f"INSERT INTO Enrollment (student_id, course_code, semester, enrollment_status, attendance_percent) VALUES ('{student_id}', '{course_code}', '{semester}', '{enrollment_status}', {attendance_percent})"
 
-    # try:
-    #     cursor.execute(sql)
-    # except mysql.connector.Error as err:
-    #     print(f"Error: {err}")
-    #     continue
-    # print(f"Inserted: {sql}")
+#     try:
+#         cursor.execute(sql)
+#     except mysql.connector.Error as err:
+#         print(f"Error: {err}")
+#         continue
+#     print(f"Inserted: {sql}")
 
 # db_conn.commit()
+# print('Enrollment data commited successfully.\n')
 
 for row in df_advising.values:
     student_id = row[0]
@@ -270,14 +270,15 @@ for row in df_advising.values:
 
     sql = f"INSERT INTO AdvisingNotes (student_id, advisor_id, date, meeting_summary, recommendations, follow_up_date) VALUES ('{student_id}', '{advisor_id}', '{date}', '{meeting_summary}', '{recommendations}', '{follow_up_date}')"
 
-    # try:
-    #     cursor.execute(sql)
-    # except mysql.connector.Error as err:
-    #     print(f"Error: {err}")
-    #     continue
-    # print(f"Inserted: {sql}") 
+#     try:
+#         cursor.execute(sql)
+#     except mysql.connector.Error as err:
+#         print(f"Error: {err}")
+#         continue
+#     print(f"Inserted: {sql}") 
 
 # db_conn.commit()
+# print('AdvisingNotes data commited successfully.\n')
 
 for row in df_calendar.values:
     semester = row[0]
@@ -288,14 +289,15 @@ for row in df_calendar.values:
 
     sql = f"INSERT INTO AcademicCalendar (semester, start_date, end_date, registration_deadline, exam_period) VALUES ('{semester}', '{start_date}', '{end_date}', '{registration_deadline}', '{exam_period}')"
 
-    # try:
-    #     cursor.execute(sql)
-    # except mysql.connector.Error as err:
-    #     print(f"Error: {err}")
-    #     continue
-    # print(f"Inserted: {sql}")
+#     try:
+#         cursor.execute(sql)
+#     except mysql.connector.Error as err:
+#         print(f"Error: {err}")
+#         continue
+#     print(f"Inserted: {sql}")
 
 # db_conn.commit()
+# print('AcademicCalendar data commited successfully.\n')
 
 for row in df_dept_faculty.values:
     department_id = row[0]
@@ -306,14 +308,15 @@ for row in df_dept_faculty.values:
 
     sql = f"INSERT INTO DepartmentFaculty (department_id, name, contact_info, faculty_members, office_hours) VALUES ('{department_id}', '{name}', '{contact_info}', '{faculty_members}', '{office_hours}')"
 
-    # try:
-    #     cursor.execute(sql)
-    # except mysql.connector.Error as err:
-    #     print(f"Error: {err}")
-    #     continue
-    # print(f"Inserted: {sql}")
+#     try:
+#         cursor.execute(sql)
+#     except mysql.connector.Error as err:
+#         print(f"Error: {err}")
+#         continue
+#     print(f"Inserted: {sql}")
 
 # db_conn.commit()
+# print('DepartmentFaculty data commited successfully.\n')
 
 for row in df_grad_reqs.values:
     major = row[0]
@@ -324,14 +327,15 @@ for row in df_grad_reqs.values:
 
     sql = f"INSERT INTO GraduationRequirements (major, required_credits, core_courses, electives, capstone_project) VALUES ('{major}', {required_credits}, '{core_courses}', '{electives}', '{capstone_project}')"
 
-    # try:
-    #     cursor.execute(sql)
-    # except mysql.connector.Error as err:
-    #     print(f"Error: {err}")
-    #     continue
-    # print(f"Inserted: {sql}")
+#     try:
+#         cursor.execute(sql)
+#     except mysql.connector.Error as err:
+#         print(f"Error: {err}")
+#         continue
+#     print(f"Inserted: {sql}")
 
 # db_conn.commit()
+# print('GraduationRequirements data commited successfully.\n')
 
 for row in df_internships.values:
     opportunity_id = row[0]
@@ -341,16 +345,17 @@ for row in df_internships.values:
     deadline = row[4]
     status = row[5]
 
-    sql = f"INSERT INTO InternshipsOpportunities (opportunity_id, company, role, requirements, deadline, status) VALUES ('{opportunity_id}', '{company}', '{role}', '{requirements}', '{deadline}', '{status}')"
+    sql = f"INSERT INTO Internships (opportunity_id, company, role, requirements, deadline, status) VALUES ('{opportunity_id}', '{company}', '{role}', '{requirements}', '{deadline}', '{status}')"
 
-    # try:
-    #     cursor.execute(sql)
-    # except mysql.connector.Error as err:
-    #     print(f"Error: {err}")
-    #     continue
-    # print(f"Inserted: {sql}")
+#     try:
+#         cursor.execute(sql)
+#     except mysql.connector.Error as err:
+#         print(f"Error: {err}")
+#         continue
+#     print(f"Inserted: {sql}")
 
 # db_conn.commit()
+# print('InternshipsOpportunities data commited successfully.\n')
 
 for row in df_financial.values:
     student_id = row[0]
@@ -361,14 +366,15 @@ for row in df_financial.values:
 
     sql = f"INSERT INTO FinancialRecords (student_id, tuition_fees, payments, scholarships, outstanding_balance) VALUES ('{student_id}', {tuition_fees}, {payments}, {scholarships}, {outstanding_balance})"
 
-    # try:
-    #     cursor.execute(sql)
-    # except mysql.connector.Error as err:
-    #     print(f"Error: {err}")
-    #     continue
-    # print(f"Inserted: {sql}")
+#     try:
+#         cursor.execute(sql)
+#     except mysql.connector.Error as err:
+#         print(f"Error: {err}")
+#         continue
+#     print(f"Inserted: {sql}")
 
 # db_conn.commit()
+# print('FinancialRecords data commited successfully.\n')
 
 for row in df_extracurricular.values:
     student_id = row[0]
@@ -378,30 +384,32 @@ for row in df_extracurricular.values:
 
     sql = f"INSERT INTO ExtracurricularActivities (student_id, activity_name, role, hours) VALUES ('{student_id}', '{activity_name}', '{role}', {hours})"
 
-    # try:
-    #     cursor.execute(sql)
-    # except mysql.connector.Error as err:
-    #     print(f"Error: {err}")
-    #     continue
-    # print(f"Inserted: {sql}")
+#     try:
+#         cursor.execute(sql)
+#     except mysql.connector.Error as err:
+#         print(f"Error: {err}")
+#         continue
+#     print(f"Inserted: {sql}")
 
 # db_conn.commit()
+# print('ExtracurricularActivities data commited successfully.\n')
 
 for row in df_attendance_behavior.values:
     student_id = row[0]
-    course_code = row[1]
+    course_code = row[1]    
     attendance_percent = row[2]
     behavior_notes = row[3]
 
     sql = f"INSERT INTO AttendanceBehavior (student_id, course_code, attendance_percent, behavior_notes) VALUES ('{student_id}', '{course_code}', {attendance_percent}, '{behavior_notes}')"
 
-    # try:
-    #     cursor.execute(sql)
-    # except mysql.connector.Error as err:
-    #     print(f"Error: {err}")
-    #     continue
-    # print(f"Inserted: {sql}")
+#     try:
+#         cursor.execute(sql)
+#     except mysql.connector.Error as err:
+#         print(f"Error: {err}")
+#         continue
+#     print(f"Inserted: {sql}")
 
 # db_conn.commit()
+# print('AttendanceBehavior data commited successfully.\n')
 
 

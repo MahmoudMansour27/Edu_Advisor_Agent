@@ -40,11 +40,8 @@ CREATE TABLE AcademicRecords (
 CREATE TABLE CourseCatalog (
     course_code VARCHAR(10) PRIMARY KEY,
     name VARCHAR(100),
-    description TEXT,
     credits INT,
-    prerequisites TEXT,
-    department VARCHAR(100),
-    instructor VARCHAR(100)
+    department VARCHAR(100)
 );
 
 -- 4. Enrollment Table
@@ -126,7 +123,6 @@ CREATE TABLE ExtracurricularActivities (
     activity_name VARCHAR(100),
     role VARCHAR(50),
     hours INT,
-    achievements TEXT,
     FOREIGN KEY (student_id) REFERENCES StudentProfile(student_id)
 );
 
@@ -149,3 +145,4 @@ try:
     print("Tables created successfully")
 except mysql.connector.Error as err:
     print(f"Error: {err}")
+

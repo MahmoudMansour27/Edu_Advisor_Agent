@@ -23,6 +23,7 @@ from brave_search_python_client import (
 )
 import requests
 from bs4 import BeautifulSoup
+import mysql.connector
 
 
 
@@ -41,6 +42,16 @@ api_key = os.getenv('BRAVE_SEARCH_API_KEY')
 if not api_key:
     msg = "BRAVE_SEARCH_API_KEY not found in environment"
     raise ValueError(msg)
+
+# Database connection
+db_conn = mysql.connector.connect(
+    host = 'localhost',
+    user = 'root',
+    password = '',
+    database = 'edu_adv_db'
+)
+
+cursor = db_conn.cursor()
 
 
 # Server
@@ -779,9 +790,690 @@ def Get_latest_unversity_news(count: int = 3) -> list:
 
 
 # --------------------------- Database connection ---------------------------
+@mcp.tool('StudentProfile_retrieve')
+def StudentProfile_retrieve(student_id: str) -> dict:
+    '''
+    StudentProfile table: Stores personal and academic information for each student, including ID, name, major, advisor, and current status.
+    Retrieve a student profile from the database based on student id.
 
+    Args:
+        student_id (str): The ID of the student.
+
+    Returns:
+        dict: The student profile.
+    '''
+
+    columns = [
+        'student_id',
+        'name',
+        'birthdate',
+        'nationality',
+        'contact', 
+        'enrollment_date',
+        'major',
+        'advisor',
+        'status'
+    ]
+
+    if not student_id:
+        raise McpError(
+            types.ErrorData(
+                code= types.INVALID_PARAMS, 
+                message= f"Missing required arguments for tool."
+            )
+        )
+    else:
+        student_id = student_id.strip().upper()
+        sql = f"SELECT * FROM StudentProfile WHERE student_id = '{student_id}'"
+        cursor.execute(sql)
+        result = cursor.fetchall()
+        data = []
+        for row in result:
+            student = {
+                columns[0]: row[0],
+                columns[1]: row[1],
+                columns[2]: row[2],
+                columns[3]: row[3],
+                columns[4]: row[4],
+                columns[5]: row[5],
+                columns[6]: row[6],
+                columns[7]: row[7],
+                columns[8]: row[8]
+            }
+            data.append(student)
+
+    if not data:
+        raise McpError(
+            types.ErrorData(
+                code= types.NOT_FOUND, 
+                message= f"Student with ID {student_id} not found."
+            )
+        )
     
+    # check for testing
+    # elif len(data) > 1:
+    #     raise McpError(
+    #         types.ErrorData(
+    #             code= types.INTERNAL_ERROR, 
+    #             message= f"Multiple students found with ID {student_id}. Please check the database."
+    #         )
+    #     )
 
+    return data[0]
+
+
+
+@mcp.tool('Student_AcademicRecords_retrieve')
+def Student_AcademicRecords_retrieve(student_id: str) -> list[dict]:
+    '''
+    AcademicRecords table: Stores academic records for each student, including course ID, course_code, couse_name, semester, credits, GPA.
+    Retrieve academic records for a student from the database based on student id.
+
+    Args:
+        student_id (str): The ID of the student.
+
+    Returns:
+        list: A list of academic records for the student.
+    '''
+
+    columns = [
+        'record_id', 
+        'student_id', 
+        'course_code', 
+        'course_name', 
+        'semester', 
+        'grade', 
+        'credits', 
+        'GPA'
+    ]
+
+    if not student_id:
+        raise McpError(
+            types.ErrorData(
+                code= types.INVALID_PARAMS, 
+                message= f"Missing required arguments for tool."
+            )
+        )
+    else:
+        student_id = student_id.strip().upper()
+        sql = f"SELECT * FROM AcademicRecords WHERE student_id = '{student_id}'"
+        cursor.execute(sql)
+        result = cursor.fetchall()
+        data = []
+        for row in result:
+            record = {
+                columns[0]: row[0],
+                columns[1]: row[1],
+                columns[2]: row[2],
+                columns[3]: row[3],
+                columns[4]: row[4],
+                columns[5]: row[5],
+                columns[6]: row[6],
+                columns[7]: row[7]
+            }
+            data.append(record)
+
+    if not data:
+        raise McpError(
+            types.ErrorData(
+                code= types.NOT_FOUND, 
+                message= f"Academic records for student with ID {student_id} not found."
+            )
+        )
+
+    return data
+
+@mcp.tool('CourseCatalog_retrieve')
+def CourseCatalog_retrieve(course_code: str) -> dict:  
+    '''
+    CourseCatalog table: Stores information about courses, including course code, name, credits, and department.
+    Retrieve a course from the database based on course code.
+
+    Args:
+        course_code (str): The code of the course.
+
+    Returns:
+        dict: The course information.
+    '''
+
+    columns = [
+        'course_code',
+        'name',
+        'credits',
+        'department'
+    ]
+
+    if not course_code:
+        raise McpError(
+            types.ErrorData(
+                code= types.INVALID_PARAMS, 
+                message= f"Missing required arguments for tool."
+            )
+        )
+    else:
+        course_code = course_code.strip().upper()
+        sql = f"SELECT * FROM CourseCatalog WHERE course_code = '{course_code}'"
+        cursor.execute(sql)
+        result = cursor.fetchall()
+        data = []
+        for row in result:
+            course = {
+                columns[0]: row[0],
+                columns[1]: row[1],
+                columns[2]: row[2],
+                columns[3]: row[3]
+            }
+            data.append(course)
+
+    if not data:
+        raise McpError(
+            types.ErrorData(
+                code= types.NOT_FOUND, 
+                message= f"Course with code {course_code} not found."
+            )
+        )
+
+    return data[0]
+
+@mcp.tool('Student_courses_enrollment_retrieve')
+def Student_courses_enrollment_retrieve(student_id: str) -> list[dict]:
+    '''
+    Enrollment table: Records students’ enrollment status in courses per semester, including student ID, course code, semester, enrollment status and attendance_percent.
+    Retrieve enrollment information for a student in a course from the database based on student id.
+
+    Args:
+        student_id (str): The ID of the student.
+
+    Returns:
+        list: A list of enrollment records for the student.
+    '''
+
+    columns = [
+        'enrollment_id',
+        'student_id',
+        'course_code',
+        'semester',
+        'enrollment_status',
+        'attendance_percent'
+    ]
+
+    if not student_id:
+        raise McpError(
+            types.ErrorData(
+                code= types.INVALID_PARAMS, 
+                message= f"Missing required argument for tool."
+            )
+        )
+    
+    student_id = student_id.strip().upper()
+    
+    sql = f"SELECT * FROM Enrollment WHERE student_id = '{student_id}'"
+    cursor.execute(sql)
+    result = cursor.fetchall()
+    data = []
+    for row in result:
+        enrollment = {
+            columns[0]: row[0],
+            columns[1]: row[1],
+            columns[2]: row[2],
+            columns[3]: row[3],
+            columns[4]: row[4],
+            columns[5]: row[5]
+        }
+        data.append(enrollment)
+
+    if not data:
+        raise McpError(
+            types.ErrorData(
+                code= types.NOT_FOUND, 
+                message= f"Enrollment record for student with ID {student_id} in course {course_code} not found."
+            )
+        )
+
+    return data
+
+
+@mcp.tool('Students_AdvisingNotes_retrieve')
+def Students_AdvisingNotes_retrieve(student_id: str) -> list[dict]:
+    '''
+    AdvisingNotes table: Stores advising notes for each student, including student ID, advisor ID, date, meeting summary, recommendations, and follow up date.
+    Retrieve advising notes for a student from the database based on student id.
+
+    Args:
+        student_id (str): The ID of the student.
+
+    Returns:
+        list: A list of advising notes for the student.
+    '''
+
+    columns = [
+        'note_id',
+        'student_id',
+        'advisor_id',
+        'date',
+        'meeting_summary',
+        'recommendations',
+        'follow_up_date'
+    ]
+
+    if not student_id:
+        raise McpError(
+            types.ErrorData(
+                code= types.INVALID_PARAMS, 
+                message= f"Missing required arguments for tool."
+            )
+        )
+    
+    student_id = student_id.strip().upper()
+    
+    sql = f"SELECT * FROM AdvisingNotes WHERE student_id = '{student_id}'"
+    cursor.execute(sql)
+    result = cursor.fetchall()
+    data = []
+    for row in result:
+        note = {
+            columns[0]: row[0],
+            columns[1]: row[1],
+            columns[2]: row[2],
+            columns[3]: row[3],
+            columns[4]: row[4],
+            columns[5]: row[5],
+            columns[6]: row[6]
+        }
+        data.append(note)
+
+    if not data:
+        raise McpError(
+            types.ErrorData(
+                code= types.NOT_FOUND, 
+                message= f"Advising notes for student with ID {student_id} not found."
+            )
+        )
+
+    return data
+
+
+@mcp.tool('Semester_AcademicCalendar_retrieve')
+def Semester_AcademicCalendar_retrieve(semester: str) -> dict:
+    '''
+    AcademicCalendar table: Contains important academic dates for each semester, including semester name, start date, end date, registration deadline, and exam period.
+    Retrieve the academic calendar for a specific semester from the database.
+
+    Args:
+        semester (str): The name of the semester.
+
+    Returns:
+        dict: The academic calendar for the specified semester.
+    '''
+
+    columns = [
+        'semester',
+        'start_date',
+        'end_date',
+        'registration_deadline',
+        'exam_period'
+    ]
+
+    if not semester:
+        raise McpError(
+            types.ErrorData(
+                code= types.INVALID_PARAMS, 
+                message= f"Missing required arguments for tool."
+            )
+        )
+    
+    semester = semester.strip().upper()
+    
+    sql = f"SELECT * FROM AcademicCalendar WHERE semester = '{semester}'"
+    cursor.execute(sql)
+    result = cursor.fetchall()
+    data = []
+    for row in result:
+        calendar = {
+            columns[0]: row[0],
+            columns[1]: row[1],
+            columns[2]: row[2],
+            columns[3]: row[3],
+            columns[4]: row[4]
+        }
+        data.append(calendar)
+
+    if not data:
+        raise McpError(
+            types.ErrorData(
+                code= types.NOT_FOUND, 
+                message= f"Academic calendar for semester {semester} not found."
+            )
+        )
+
+    return data[0]
+
+
+@mcp.tool('Departments_information_retrieve')
+def Departments_information_retrieve(department_name: str) -> dict:
+    '''
+    Departments table: Contains information about university departments, including department id, name, contact info, faculty members, and office hours.
+    Retrieve information about a specific department from the database based on department name.
+
+    Args:
+        department_name (str): The name of the department.
+
+    Returns:
+        dict: The information about the specified department.
+    '''
+
+    columns = [
+        'department_id',
+        'name',
+        'contact_info',
+        'faculty_members',
+        'office_hours'
+    ]
+
+    if not department_name:
+        raise McpError(
+            types.ErrorData(
+                code= types.INVALID_PARAMS, 
+                message= f"Missing required arguments for tool."
+            )
+        )
+    
+    department_name = department_name.strip().title()
+    
+    sql = f"SELECT * FROM DepartmentFaculty WHERE name = '{department_name}'"
+    cursor.execute(sql)
+    result = cursor.fetchall()
+    data = []
+    for row in result:
+        department = {
+            columns[0]: row[0],
+            columns[1]: row[1],
+            columns[2]: row[2],
+            columns[3]: row[3],
+            columns[4]: row[4]
+        }
+        data.append(department)
+
+    if not data:
+        raise McpError(
+            types.ErrorData(
+                code= types.NOT_FOUND, 
+                message= f"Department {department_name} not found."
+            )
+        )
+
+    return data[0]
+
+
+@mcp.tool('GraduationRequirements_per_major_retrieve')
+def GraduationRequirements_per_major_retrieve(major: str) -> dict:
+    '''
+    GraduationRequirements table: Contains graduation requirements for each major, including major name, required credits, core courses, electives, and capstone project.
+    Retrieve graduation requirements for a specific major from the database based on major name.
+
+    Args:
+        major (str): The name of the major.
+
+    Returns:
+        dict: The graduation requirements for the specified major.
+    '''
+
+    columns = [
+        'major',
+        'required_credits',
+        'core_courses',
+        'electives',
+        'capstone_project'
+    ]
+
+    if not major:
+        raise McpError(
+            types.ErrorData(
+                code= types.INVALID_PARAMS, 
+                message= f"Missing required arguments for tool."
+            )
+        )
+    
+    major = major.strip().title()
+    
+    sql = f"SELECT * FROM GraduationRequirements WHERE major = '{major}'"
+    cursor.execute(sql)
+    result = cursor.fetchall()
+    data = []
+    for row in result:
+        requirements = {
+            columns[0]: row[0],
+            columns[1]: row[1],
+            columns[2]: row[2],
+            columns[3]: row[3],
+            columns[4]: row[4]
+        }
+        data.append(requirements)
+
+    if not data:
+        raise McpError(
+            types.ErrorData(
+                code= types.NOT_FOUND, 
+                message= f"Graduation requirements for major {major} not found."
+            )
+        )
+
+    return data[0]
+
+
+@mcp.tool('Internships_Opportunities_retrieve')
+def Internships_Opportunities_retrieve() -> list[dict]:
+    '''
+    Internships table: Contains information about internship opportunities, including company, role, requirements, deadline, and status.
+    Retrieve open internship opportunities at current time.
+
+    Returns:
+        list: A list of open internship opportunities.
+    '''
+
+    columns = [
+        'opportunity_id',
+        'company',
+        'role',
+        'requirements',
+        'deadline',
+        'status'
+    ]
+    
+    sql = f"SELECT * FROM Internships WHERE status = 'Open'"
+    cursor.execute(sql)
+    result = cursor.fetchall()
+    data = []
+    for row in result:
+        internship = {
+            columns[0]: row[0],
+            columns[1]: row[1],
+            columns[2]: row[2],
+            columns[3]: row[3],
+            columns[4]: row[4],
+            columns[5]: row[5]
+        }
+        data.append(internship)
+
+    if not data:
+        raise McpError(
+            types.ErrorData(
+                code= types.NOT_FOUND, 
+                message= "No open internship opportunities found."
+            )
+        )
+
+    return data
+
+
+@mcp.tool('Students_FinancialRecords_retrieve')
+def Students_FinancialRecords_retrieve(student_id: str) -> list[dict]:
+    '''
+    FinancialRecords table: Stores financial records for each student, including student ID, tuition fees, payments, scholarships, and outstanding balance.
+    Retrieve financial records for a student from the database based on student id.
+
+    Args:
+        student_id (str): The ID of the student.
+
+    Returns:
+        list: A list of financial records for the student.
+    '''
+
+    columns = [
+        'financial_id',
+        'student_id',
+        'tuition_fees',
+        'payments',
+        'scholarships',
+        'outstanding_balance'
+    ]
+
+    if not student_id:
+        raise McpError(
+            types.ErrorData(
+                code= types.INVALID_PARAMS, 
+                message= f"Missing required arguments for tool."
+            )
+        )
+    
+    student_id = student_id.strip().upper()
+    
+    sql = f"SELECT * FROM FinancialRecords WHERE student_id = '{student_id}'"
+    cursor.execute(sql)
+    result = cursor.fetchall()
+    data = []
+    for row in result:
+        record = {
+            columns[0]: row[0],
+            columns[1]: row[1],
+            columns[2]: row[2],
+            columns[3]: row[3],
+            columns[4]: row[4],
+            columns[5]: row[5]
+        }
+        data.append(record)
+
+    if not data:
+        raise McpError(
+            types.ErrorData(
+                code= types.NOT_FOUND, 
+                message= f"Financial records for student with ID {student_id} not found."
+            )
+        )
+
+    return data
+
+
+@mcp.tool('Students_ExtracurricularActivities_retrieve')
+def Students_ExtracurricularActivities_retrieve(student_id: str) -> list[dict]:
+    '''
+    ExtracurricularActivities table: Contains information about extracurricular activities, including student ID, activity name, role, and hours.
+    Retrieve extracurricular activities for a student from the database based on student id.
+
+    Args:
+        student_id (str): The ID of the student.
+
+    Returns:
+        list: A list of extracurricular activities for the student.
+    '''
+
+    columns = [
+        'activity_id',
+        'student_id',
+        'activity_name',
+        'role',
+        'hours'
+    ]
+
+    if not student_id:
+        raise McpError(
+            types.ErrorData(
+                code= types.INVALID_PARAMS, 
+                message= f"Missing required arguments for tool."
+            )
+        )
+    
+    student_id = student_id.strip().upper()
+    
+    sql = f"SELECT * FROM ExtracurricularActivities WHERE student_id = '{student_id}'"
+    cursor.execute(sql)
+    result = cursor.fetchall()
+    data = []
+    for row in result:
+        activity = {
+            columns[0]: row[0],
+            columns[1]: row[1],
+            columns[2]: row[2],
+            columns[3]: row[3],
+            columns[4]: row[4]
+        }
+        data.append(activity)
+
+    if not data:
+        raise McpError(
+            types.ErrorData(
+                code= types.NOT_FOUND, 
+                message= f"Extracurricular activities for student with ID {student_id} not found."
+            )
+        )
+
+    return data
+
+
+@mcp.tool('Students_AttendanceBehavior_retrieve')
+def Students_AttendanceBehavior_retrieve(student_id: str) -> list[dict]:
+    '''
+    AttendanceBehavior table: Records attendance rates and behavior notes per student for specific courses, including student ID, course code, attendance percent, and behavior notes.
+    Retrieve attendance and behavior records for a student from the database based on student id.
+
+    Args:
+        student_id (str): The ID of the student.
+
+    Returns:
+        list: A list of attendance and behavior records for the student.
+    '''
+
+    columns = [
+        'behavior_id',
+        'student_id',
+        'course_code',
+        'attendance_percent',
+        'behavior_notes'
+    ]
+
+    if not student_id:
+        raise McpError(
+            types.ErrorData(
+                code= types.INVALID_PARAMS, 
+                message= f"Missing required arguments for tool."
+            )
+        )
+    
+    student_id = student_id.strip().upper()
+    
+    sql = f"SELECT * FROM AttendanceBehavior WHERE student_id = '{student_id}'"
+    cursor.execute(sql)
+    result = cursor.fetchall()
+    data = []
+    for row in result:
+        record = {
+            columns[0]: row[0],
+            columns[1]: row[1],
+            columns[2]: row[2],
+            columns[3]: row[3],
+            columns[4]: row[4]
+        }
+        data.append(record)
+
+    if not data:
+        raise McpError(
+            types.ErrorData(
+                code= types.NOT_FOUND, 
+                message= f"Attendance and behavior records for student with ID {student_id} not found."
+            )
+        )
+
+    return data
 
 
 
